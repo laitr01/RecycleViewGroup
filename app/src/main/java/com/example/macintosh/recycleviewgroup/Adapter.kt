@@ -5,12 +5,13 @@ import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import java.util.ArrayList
+import java.util.*
 
 open class Adapter<P:Parent<C>, C>(dataSet: List<P>) :
         RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     val TYPE_PARENT = 0
     val TYPE_CHILD = 1
+    val TYPE_LOADMORE = 2
     private val INVALID_FLAT_POSITION = -1
     internal var flatItemList: MutableList<DataWrapper<P, C>>
     private lateinit var parentList: List<P>
@@ -29,11 +30,17 @@ open class Adapter<P:Parent<C>, C>(dataSet: List<P>) :
 
             GroupViewHolder<P, C>(v)
         } else {
-            // Create a new view.
-            val v = LayoutInflater.from(viewGroup.context)
-                    .inflate(R.layout.text_row_item, viewGroup, false)
+            if(viewType == TYPE_LOADMORE){
+                val v = LayoutInflater.from(viewGroup.context)
+                        .inflate(R.layout.loadmore, viewGroup, false)
 
-            ItemViewHolder<C>(v)
+                LoadmoreViewholder<C>(v)
+            }else{
+                val v = LayoutInflater.from(viewGroup.context)
+                        .inflate(R.layout.text_row_item, viewGroup, false)
+
+                ItemViewHolder<C>(v)
+            }
         }
     }
     // Replace the contents of a view (invoked by the layout manager)
@@ -55,10 +62,15 @@ open class Adapter<P:Parent<C>, C>(dataSet: List<P>) :
             parentViewHolder.textView.text = parent.javaClass.canonicalName
 
         } else {
-            val childViewHolder = viewHolder as ItemViewHolder<C>
-            childViewHolder.mChild = listItem.getChild()
-            val child = listItem.getChild() as DataItem
-            childViewHolder.textView.text = child.data
+            if(listItem.loadmore){
+
+            }else{
+                val childViewHolder = viewHolder as ItemViewHolder<C>
+                childViewHolder.mChild = listItem.getChild()
+                val child = listItem.getChild() as DataItem
+                childViewHolder.textView.text = child.data
+            }
+
             //onBindChildViewHolder(childViewHolder, getNearestParentPosition(flatPosition), getChildPosition(flatPosition), listItem.getChild())
         }
     }
@@ -78,7 +90,7 @@ open class Adapter<P:Parent<C>, C>(dataSet: List<P>) :
         return if (listItem.isParent()) {
             getParentViewType(getNearestParentPosition(flatPosition))
         } else {
-            getChildViewType(getNearestParentPosition(flatPosition), getChildPosition(flatPosition))
+            getChildViewType(listItem.loadmore, getNearestParentPosition(flatPosition), getChildPosition(flatPosition))
         }
     }
 
@@ -125,8 +137,11 @@ open class Adapter<P:Parent<C>, C>(dataSet: List<P>) :
      * @return integer value identifying the type of the view needed to represent the child at
      * `parentPosition`. Type codes need not be contiguous.
      */
-    fun getChildViewType(parentPosition: Int, childPosition: Int): Int {
-        return TYPE_CHILD
+    fun getChildViewType(loadmore:Boolean, parentPosition: Int, childPosition: Int): Int {
+        return if (loadmore)
+            TYPE_LOADMORE
+        else
+            TYPE_CHILD
     }
 
     /**
